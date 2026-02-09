@@ -2,8 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Config struct {
@@ -12,6 +18,30 @@ type Config struct {
 	// by setting ms timeouts.
 	CheckInterval         time.Duration
 	ResponseTimeThreshold time.Duration
+}
+
+type metrics struct {
+	//responseTime   prometheus.Histogram
+	responseTotal *prometheus.CounterVec
+}
+
+func newMetrics(reg prometheus.Registerer) *metrics {
+	m := &metrics{
+		responseTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
+			Name: "healthcheck_http_response_total",
+			Help: "The total number of HTTP responses",
+		}, []string{"http_status_code"}),
+	}
+	return m
+}
+
+func recordMetrics(m *metrics, status string) {
+	go func() {
+		for {
+			m.responseTotal.WithLabelValues(status).Inc()
+			time.Sleep(4 * time.Second)
+		}
+	}()
 }
 
 func LoadConfig() (Config, error) {
@@ -42,32 +72,39 @@ func LoadConfig() (Config, error) {
 }
 
 func main() {
-	cfg, err := LoadConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v", err)
-		os.Exit(1)
-	}
+	// cfg, err := LoadConfig()
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "Error loading config: %v", err)
+	// 	os.Exit(1)
+	// }
 
-	ticker := time.NewTicker(time.Duration(cfg.CheckInterval))
-	defer ticker.Stop()
-	done := make(chan bool)
-	go func() {
-		time.Sleep(100000 * time.Second)
-		done <- true
-	}()
+	// ticker := time.NewTicker(time.Duration(cfg.CheckInterval))
+	// defer ticker.Stop()
+	// done := make(chan bool)
+	// go func() {
+	// 	time.Sleep(100000 * time.Second)
+	// 	done <- true
+	// }()
 
-	for {
-		select {
-		case <-done:
-			fmt.Println("Done!")
-			return
-		case t := <-ticker.C:
-			fmt.Println("Current time: ", t)
-		}
-	}
+	// for {
+	// 	select {
+	// 	case <-done:
+	// 		fmt.Println("Done!")
+	// 		return
+	// 	case t := <-ticker.C:
+	// 		fmt.Println("Current time: ", t)
+	// 	}
+	// }
 
-	// http.HandleFunc("/foo", Foo)
-	// log.Fatal(http.ListenAndServe(":8080", nil))
+	reg := prometheus.NewRegistry()
+	m := newMetrics(reg)
+	recordMetrics(m, "200")
+	// reg.MustRegister(
+	// 	collectors.NewGoCollector(),
+	// 	collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	// )
+	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	log.Fatal(http.ListenAndServe(":2112", nil))
 
 }
 
