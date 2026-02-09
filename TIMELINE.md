@@ -1,0 +1,15 @@
+# Project Timeline
+
+The idea behind this timeline is to track some of the things I started to investigate and learn about so that the team gets a better understanding of where I am, and how I think. This should also help clarify some of the technical decisions I made, and why I made them. I understand in the age of LLMs, this might be a good idea as proof of individual work as well :D
+
+## Init
+
+I have had a lot of success with managing packages with Nix+devenv+direnv, specifically devenv has been a nice abstraction over Nix to make it easy to unify the development environment across teams for each repository (you get everything you need to contribute by just changing directory). I plan to also hook in some QoL scripts and pre-commit hooks into the env for the dev loop.
+
+## Go Structure
+
+I don't have a lot of production experience developing a large project in Go, so I am a little bit uncertain what the appropriate ways to structure projects are. This will be small, so I will keep it simple for now, but I did some reading: https://go.dev/doc/modules/layout, https://github.com/golang-standards/project-layout (this seemed like overkill).
+
+## Setting up vanilla server with configs
+
+There's not much more to structure for now, I want to start implementing some of the requirements and see where I get. Again I will keep it simple, start with envvars because then I don't have to worry about unmarshelling yaml configs for now, maybe I will loop back and allow both config and env vars, but env vars are simpler to start with.
