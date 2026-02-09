@@ -19,3 +19,8 @@ There's not much more to structure for now, I want to start implementing some of
 Now that we have a simple server in place that will be used for serving the prom metrics later (note for later: https://prometheus.io/docs/guides/go-application/), we need to start the timed loop of reaching out to the configured endpoint.
 
 Find https://stackoverflow.com/questions/16466320/is-there-a-way-to-do-repetitive-tasks-at-intervals, points to using time.NewTicker and using Go channels. I don't have a lot of experience with channels, but understand high level how it works. I'm gonna play around with this to see it works as expected.
+
+## Prometheus metrics
+
+Before finishing the call out to services and parse, I want to start to skaffold the prometheus metrics to produce. Following this, it would be good to start setting up some simple docker compose with prom and grafana as well as a service to health check. I will go with elasticsearch because the status can be quite verbose and interesting for parsing, plus I know how to break it in an HA setup :D
+
