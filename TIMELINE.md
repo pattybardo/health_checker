@@ -13,3 +13,9 @@ I don't have a lot of production experience developing a large project in Go, so
 ## Setting up vanilla server with configs
 
 There's not much more to structure for now, I want to start implementing some of the requirements and see where I get. Again I will keep it simple, start with envvars because then I don't have to worry about unmarshelling yaml configs for now, maybe I will loop back and allow both config and env vars, but env vars are simpler to start with.
+
+## Start calling out to the services
+
+Now that we have a simple server in place that will be used for serving the prom metrics later (note for later: https://prometheus.io/docs/guides/go-application/), we need to start the timed loop of reaching out to the configured endpoint.
+
+Find https://stackoverflow.com/questions/16466320/is-there-a-way-to-do-repetitive-tasks-at-intervals, points to using time.NewTicker and using Go channels. I don't have a lot of experience with channels, but understand high level how it works. I'm gonna play around with this to see it works as expected.
