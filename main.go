@@ -36,12 +36,7 @@ func newMetrics(reg prometheus.Registerer) *metrics {
 }
 
 func recordMetrics(m *metrics, status string) {
-	go func() {
-		for {
-			m.responseTotal.WithLabelValues(status).Inc()
-			time.Sleep(4 * time.Second)
-		}
-	}()
+	m.responseTotal.WithLabelValues(status).Inc()
 }
 
 func LoadConfig() (Config, error) {
@@ -72,33 +67,35 @@ func LoadConfig() (Config, error) {
 }
 
 func main() {
-	// cfg, err := LoadConfig()
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Error loading config: %v", err)
-	// 	os.Exit(1)
-	// }
-
-	// ticker := time.NewTicker(time.Duration(cfg.CheckInterval))
-	// defer ticker.Stop()
-	// done := make(chan bool)
-	// go func() {
-	// 	time.Sleep(100000 * time.Second)
-	// 	done <- true
-	// }()
-
-	// for {
-	// 	select {
-	// 	case <-done:
-	// 		fmt.Println("Done!")
-	// 		return
-	// 	case t := <-ticker.C:
-	// 		fmt.Println("Current time: ", t)
-	// 	}
-	// }
+	cfg, err := LoadConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v", err)
+		os.Exit(1)
+	}
 
 	reg := prometheus.NewRegistry()
 	m := newMetrics(reg)
-	recordMetrics(m, "200")
+
+	ticker := time.NewTicker(time.Duration(cfg.CheckInterval))
+	defer ticker.Stop()
+	done := make(chan bool)
+	go func() {
+		time.Sleep(300000 * time.Second)
+		done <- true
+	}()
+	go func() {
+		for {
+			select {
+			case <-done:
+				fmt.Println("Done!")
+				return
+			case t := <-ticker.C:
+				recordMetrics(m, "200")
+				fmt.Println("Current time: ", t)
+			}
+		}
+	}()
+
 	// reg.MustRegister(
 	// 	collectors.NewGoCollector(),
 	// 	collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
