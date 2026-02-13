@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -90,7 +91,17 @@ func main() {
 				fmt.Println("Done!")
 				return
 			case t := <-ticker.C:
-				recordMetrics(m, "200")
+				start := time.Now()
+				resp, err := http.Get(cfg.HealthEndpointUrl)
+				elapsed := time.Since(start)
+				if err != nil {
+					panic(err)
+				}
+				defer func() { _ = resp.Body.Close() }()
+				body, _ := io.ReadAll(resp.Body)
+				fmt.Println("get:\n", string(body))
+				fmt.Println("Response time:", elapsed)
+				recordMetrics(m, resp.Status)
 				fmt.Println("Current time: ", t)
 			}
 		}

@@ -24,3 +24,6 @@ Find https://stackoverflow.com/questions/16466320/is-there-a-way-to-do-repetitiv
 
 Before finishing the call out to services and parse, I want to start to skaffold the prometheus metrics to produce. Following this, it would be good to start setting up some simple docker compose with prom and grafana as well as a service to health check. I will go with elasticsearch because the status can be quite verbose and interesting for parsing, plus I know how to break it in an HA setup :D
 
+## Timing/Alerting
+
+I think I am just going to start with capturing the response times, and comparing this with the alerting threshold, but I would like to refactor this later to use a cancellable context to stop the request when reaching the threshold.
