@@ -14,20 +14,22 @@ import (
 )
 
 type Config struct {
-	HealthEndpointUrl string
-	// Play around with durations instead of ints, lets us more easily test timeouts
-	// by setting ms timeouts.
+	HealthEndpointUrl     string
 	CheckInterval         time.Duration
 	ResponseTimeThreshold time.Duration
 }
 
 type metrics struct {
-	//responseTime   prometheus.Histogram
+	responseTime  *prometheus.HistogramVec
 	responseTotal *prometheus.CounterVec
 }
 
 func newMetrics(reg prometheus.Registerer) *metrics {
 	m := &metrics{
+		responseTime: promauto.With(reg).NewHistogramVec(prometheus.HistogramOpts{
+			Name: "healthcheck_http_response_time_seconds",
+			Help: "Http response times in seconds",
+		}, []string{"endpoint"}),
 		responseTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
 			Name: "healthcheck_http_response_total",
 			Help: "The total number of HTTP responses",
@@ -36,7 +38,9 @@ func newMetrics(reg prometheus.Registerer) *metrics {
 	return m
 }
 
-func recordMetrics(m *metrics, status string) {
+// TODO: Split metrics functions out later
+func recordMetrics(m *metrics, status string, elapsed time.Duration, url string) {
+	m.responseTime.WithLabelValues(url).Observe(elapsed.Seconds())
 	m.responseTotal.WithLabelValues(status).Inc()
 }
 
@@ -65,6 +69,10 @@ func LoadConfig() (Config, error) {
 	}
 
 	return config, nil
+}
+
+func mockAlert() {
+	fmt.Println("TODO: Mock Alert")
 }
 
 func main() {
@@ -97,30 +105,29 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+
+				if cfg.ResponseTimeThreshold < elapsed {
+					fmt.Println("TODO: Warning")
+				}
+
+				if resp.StatusCode != http.StatusOK {
+					mockAlert()
+				}
+
 				defer func() { _ = resp.Body.Close() }()
 				body, _ := io.ReadAll(resp.Body)
 				fmt.Println("get:\n", string(body))
+				// TODO: Parse payload with parse interface and
+				// use optional cluster health indicators
+				// like non-green shard/cluster state to throw error log
 				fmt.Println("Response time:", elapsed)
-				recordMetrics(m, resp.Status)
+				recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
 				fmt.Println("Current time: ", t)
 			}
 		}
 	}()
 
-	// reg.MustRegister(
-	// 	collectors.NewGoCollector(),
-	// 	collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	// )
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	log.Fatal(http.ListenAndServe(":2112", nil))
 
 }
-
-// type countHandler struct {
-// 	mu sync.Mutex // guards n
-// 	n  int
-// }
-
-// func Foo(w http.ResponseWriter, r *http.Request) {
-// 	w.Write([]byte(`{"bar":baz}`))
-// }
