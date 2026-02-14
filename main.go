@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -71,14 +72,20 @@ func LoadConfig() (Config, error) {
 	return config, nil
 }
 
-func mockAlert() {
-	fmt.Println("TODO: Mock Alert")
+func mockAlert(msg string, args ...any) {
+	slog.Error(msg, args...)
+	// TODO: Mock slack message
 }
 
 func main() {
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+	slog.Info("Starting health checker")
+
 	cfg, err := LoadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v", err)
+		logger.Error("Error loading config", "error", err)
 		os.Exit(1)
 	}
 
@@ -89,45 +96,65 @@ func main() {
 	defer ticker.Stop()
 	done := make(chan bool)
 	go func() {
-		time.Sleep(300000 * time.Second)
-		done <- true
-	}()
-	go func() {
-		for {
-			select {
-			case <-done:
-				fmt.Println("Done!")
-				return
-			case t := <-ticker.C:
-				start := time.Now()
-				resp, err := http.Get(cfg.HealthEndpointUrl)
-				elapsed := time.Since(start)
-				if err != nil {
-					panic(err)
-				}
-
-				if cfg.ResponseTimeThreshold < elapsed {
-					fmt.Println("TODO: Warning")
-				}
-
-				if resp.StatusCode != http.StatusOK {
-					mockAlert()
-				}
-
-				defer func() { _ = resp.Body.Close() }()
-				body, _ := io.ReadAll(resp.Body)
-				fmt.Println("get:\n", string(body))
-				// TODO: Parse payload with parse interface and
-				// use optional cluster health indicators
-				// like non-green shard/cluster state to throw error log
-				fmt.Println("Response time:", elapsed)
-				recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
-				fmt.Println("Current time: ", t)
-			}
-		}
+		healthCheck(done, ticker, cfg, m)
 	}()
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	log.Fatal(http.ListenAndServe(":2112", nil))
+	log.Fatal(http.ListenAndServe(":8989", nil))
 
+}
+
+func healthCheck(done chan bool, ticker *time.Ticker, cfg Config, m *metrics) {
+	for {
+		select {
+		case <-done:
+			os.Exit(1)
+		case <-ticker.C:
+			start := time.Now()
+			resp, err := http.Get(cfg.HealthEndpointUrl)
+			elapsed := time.Since(start)
+			if err != nil {
+				// TODO: Should I include the info in the requirements for this kind of error?
+				slog.Error("HTTP error", "error", err.Error())
+				mockAlert("Error getting endpoint", "endpoint", cfg.HealthEndpointUrl, "error", err.Error())
+				continue
+			}
+
+			// req: Implement logging for all health checks, including timestamp,
+			// endpoint, response time, and status.
+			// Is there a way to set this in some default object that get's passed to make the logging cleaner?
+
+			if cfg.ResponseTimeThreshold < elapsed {
+				slog.Warn(
+					"Response time exceeded threshold",
+					"endpoint", cfg.HealthEndpointUrl,
+					"responseTime", elapsed.String(),
+					"responseThreshold", cfg.ResponseTimeThreshold.String(),
+					"status", resp.StatusCode,
+				)
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				mockAlert("Non 200 status code")
+			}
+
+			body, _ := io.ReadAll(resp.Body)
+			err = resp.Body.Close()
+			if err != nil {
+				slog.Warn("Error closing the response body", "error", err)
+			}
+			slog.Info(string(body))
+			// TODO: Parse payload with parse interface and
+			// use optional cluster health indicators
+			// like non-green shard/cluster state to throw error log
+			slog.Info(
+				"Finished tick",
+				"endpoint", cfg.HealthEndpointUrl,
+				"responseTime", elapsed.String(),
+				"responseThreshold", cfg.ResponseTimeThreshold.String(),
+				"status", resp.StatusCode,
+			)
+			recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
+		}
+	}
 }
