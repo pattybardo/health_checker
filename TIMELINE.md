@@ -27,3 +27,12 @@ Before finishing the call out to services and parse, I want to start to skaffold
 ## Timing/Alerting
 
 I think I am just going to start with capturing the response times, and comparing this with the alerting threshold, but I would like to refactor this later to use a cancellable context to stop the request when reaching the threshold.
+
+
+## Deployment
+
+There are still a few things to improve on the checker side, but I want to complete the deployment side of things so it's done. I have a few ideas around the terraform/pulumi deploy, where I may include a hydrated Gitops solution if I make the minikube setup deterministic and easy to set up.
+
+## Tests
+
+Now that the implementation is mostly figured out and the behavior is not bound to change too much, it is valuable to include tests.

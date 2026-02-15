@@ -1,4 +1,20 @@
 services:
+  healthchecker:
+    build: .
+    container_name: health-checker
+    environment:
+      - PORT=8990
+      - CHECK_INTERVAL=5s
+      - INSTANCE=docker-compose
+      - RESPONSE_TIME_THRESHOLD=3ms
+      - HEALTH_ENDPOINT_URL=http://elasticsearch:9200/_cluster/health
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8990/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "8990:8990"
   prometheus:
     image: prom/prometheus:v3.5.1
     container_name: healthcheck-prometheus
@@ -7,7 +23,7 @@ services:
     volumes:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -24,7 +40,7 @@ services:
     volumes:
       - ./configs/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3

@@ -10,15 +10,6 @@
     pkgs.kubernetes-helm
   ];
 
-  # https://devenv.sh/languages/
-  # languages.rust.enable = true;
-
-  # https://devenv.sh/processes/
-  # processes.dev.exec = "${lib.getExe pkgs.watchexec} -n -- ls -la";
-
-  # https://devenv.sh/services/
-  # services.postgres.enable = true;
-
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
     echo hello from $GREET
@@ -27,7 +18,7 @@
   # https://devenv.sh/basics/
   enterShell = ''
     hello         # Run scripts directly
-    go --version # Use packages
+    go version # Use packages
   '';
 
   # https://devenv.sh/tasks/

@@ -1,8 +1,13 @@
 global:
   scrape_interval: 15s
 
+# Splitting into multiple jobs just to not have to pass labels in the code
 scrape_configs:
-  - job_name: "healthchecker"
+  - job_name: "healthchecker-local"
     scrape_interval: 15s
     static_configs:
       - targets: ["host.docker.internal:8989"]
+  - job_name: "healthchecker-compose"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["healthchecker:8990"]

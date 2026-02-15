@@ -89,7 +89,14 @@ func main() {
 		logger.Error("Error loading config", "error", err)
 		os.Exit(1)
 	}
+
+	instance := os.Getenv("INSTANCE")
+	if instance == "" {
+		instance = "local"
+	}
+
 	logger = slog.Default().With(
+		"instance", instance,
 		"endpoint", cfg.HealthEndpointUrl,
 		"responseThreshold", cfg.ResponseTimeThreshold.String(),
 	)
@@ -105,7 +112,16 @@ func main() {
 	}()
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	log.Fatal(http.ListenAndServe(":8989", nil))
+	// TODO: Take inspiration from prom and have some endpoint status here maybe?
+	healthyHandler := func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "Hey I seem to be healthy! :D")
+	}
+	http.HandleFunc("/health", healthyHandler)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8989"
+	}
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 
 }
 
@@ -123,7 +139,6 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 			resp, err := http.Get(cfg.HealthEndpointUrl)
 			elapsed := time.Since(start)
 			if err != nil {
-				// TODO: Should I include the info in the requirements for this kind of error?
 				logger.Error("HTTP error", "error", err.Error())
 				mockAlert(logger, "Error getting endpoint", "error", err.Error())
 				continue
@@ -134,10 +149,6 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 				"responseTime", elapsed.String(),
 			)
 
-			// req: Implement logging for all health checks, including timestamp,
-			// endpoint, response time, and status.
-			// Is there a way to set this in some default object that get's passed to make the logging cleaner?
-
 			if cfg.ResponseTimeThreshold < elapsed {
 				healthChecklogger.Warn("Response time exceeded threshold")
 			}
@@ -146,13 +157,13 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 				mockAlert(healthChecklogger, "Non 200 status code")
 			}
 
-			parseResponse(healthChecklogger, cfg, ecp, resp, elapsed)
+			parseResponse(healthChecklogger, ecp, resp)
 			recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
 		}
 	}
 }
 
-func parseResponse(logger *slog.Logger, cfg Config, parser parsing.HealthParser, resp *http.Response, elapsed time.Duration) {
+func parseResponse(logger *slog.Logger, parser parsing.HealthParser, resp *http.Response) {
 	body, _ := io.ReadAll(resp.Body)
 	err := resp.Body.Close()
 	if err != nil {
