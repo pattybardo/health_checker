@@ -48,3 +48,4 @@ These are things I probably won't get around to doing but would like to implemen
 - **Hydrated manifests + ArgoCD** : Boot cluster with ArgoCD. Include scripts for automatically hydrating helm manifests into explicit outputs.
 - **Terraform booting kind cluster** : Skip having to handover from devenv to tf and make running solution more streamlined.
 - **Overall Productification** : I have hardcoded a lot of values to keep this simple. For a more serious setup, there would be much more templating and less magic strings everywhere.
+- **Simpler Setup**: The setup is a bit reliant on the README instructions, would probably be nicer with a tiny script to setup everything up.

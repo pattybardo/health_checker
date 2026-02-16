@@ -5,6 +5,18 @@ import (
 	"fmt"
 )
 
+type ParserEnum int
+
+const (
+	EnumDefaultParser ParserEnum = iota
+	EnumElasticsearchParser
+)
+
+var EnumToParser = map[ParserEnum]HealthParser{
+	EnumDefaultParser:       &DefaultParser{},
+	EnumElasticsearchParser: &ElasticClusterParser{},
+}
+
 type Status int
 
 const (
@@ -12,12 +24,6 @@ const (
 	StatusDegraded
 	StatusUnhealthy
 )
-
-var elasticStringStatus = map[string]Status{
-	"green":  StatusHealthy,
-	"yellow": StatusDegraded,
-	"red":    StatusUnhealthy,
-}
 
 type Result struct {
 	Status Status
@@ -30,7 +36,31 @@ type HealthParser interface {
 	ServiceName() string
 }
 
+// Default
+
+type DefaultParser struct{}
+
+func (dp *DefaultParser) Parse(body []byte) (Result, error) {
+	return Result{
+		// Default Parser could determine health from status code, but I am not sure
+		// we want to bake the same business logic into both, or what we gain by doing so.
+		// (Error on non 200 and also unhealthy)
+		Status: StatusHealthy,
+		ID:     "unknown",
+	}, nil
+}
+
+func (dp *DefaultParser) ServiceName() string {
+	return "unknown"
+}
+
 // Elastic
+
+var elasticStringStatus = map[string]Status{
+	"green":  StatusHealthy,
+	"yellow": StatusDegraded,
+	"red":    StatusUnhealthy,
+}
 
 type ElasticClusterParser struct{}
 

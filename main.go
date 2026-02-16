@@ -15,10 +15,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+var envStringToParserEnum = map[string]parsing.ParserEnum{
+	"default":       parsing.EnumDefaultParser,
+	"elasticsearch": parsing.EnumElasticsearchParser,
+}
+
 type Config struct {
 	HealthEndpointUrl     string
 	CheckInterval         time.Duration
 	ResponseTimeThreshold time.Duration
+	Parser                parsing.ParserEnum
 }
 
 type metrics struct {
@@ -64,10 +70,19 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("HEALTH_ENDPOINT_URL must not be empty")
 	}
 
+	parserFromEnv := os.Getenv("PARSER")
+
+	parser, ok := envStringToParserEnum[parserFromEnv]
+	if !ok {
+		slog.Warn("Missing parser configuration. Setting default parser", "parser", parserFromEnv)
+		parser = parsing.EnumDefaultParser
+	}
+
 	config := Config{
 		HealthEndpointUrl:     healthEndpointUrl,
 		CheckInterval:         checkInterval,
 		ResponseTimeThreshold: responseTimeThreshold,
+		Parser:                parser,
 	}
 
 	return config, nil
@@ -75,7 +90,12 @@ func LoadConfig() (Config, error) {
 
 func mockAlert(logger *slog.Logger, msg string, args ...any) {
 	logger.Error(msg, args...)
-	// TODO: Mock slack message
+	// TODO: Mock slack message.
+	// In reality I would add more context into a slack error message for what exactly is wrong so
+	// we can get to the issue as fast as possible.
+
+	// Using fmt.Println so logs are obvious visually for demonstration purposes.
+	_, _ = fmt.Println("\nReaching out to @oncall in #our-favorite-channel...\n There seems to be issues...")
 }
 
 func main() {
@@ -129,7 +149,7 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 	// TODO: Hardcoded for now, maybe add default parser later.
 	// TODO: With many endpoints this parser information needs to be chosen by I guess some sort of disocvery map.
 	// i.e have the config loop naively check the endpoint and see if it maps to a parser we have setup
-	ecp := &parsing.ElasticClusterParser{}
+	p := parsing.EnumToParser[cfg.Parser]
 	for {
 		select {
 		case <-done:
@@ -144,7 +164,7 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 				continue
 			}
 			healthChecklogger := logger.With(
-				"service", ecp.ServiceName(),
+				"service", p.ServiceName(),
 				"status", resp.StatusCode,
 				"responseTime", elapsed.String(),
 			)
@@ -154,10 +174,10 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				mockAlert(healthChecklogger, "Non 200 status code")
+				mockAlert(healthChecklogger, "Unhealthy endpoint")
 			}
 
-			parseResponse(healthChecklogger, ecp, resp)
+			parseResponse(healthChecklogger, p, resp)
 			recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
 		}
 	}
