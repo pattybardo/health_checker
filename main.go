@@ -165,8 +165,8 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 			// should be here, but one idea is to define the backoff outside the channel, and reset it inside once
 			// there is a healthy check. Otherwise consecutive retries will not go through an exponential backoff loop
 			retryCfg := retryBackoff{
-				counter: 1,
-				// TODO: Could make configurable
+				// TODO: Could make threshold configurable
+				counter:   1,
 				threshold: 4,
 				retry:     true,
 			}
@@ -195,12 +195,14 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 				}
 
 				parseResponse(healthChecklogger, p, resp, &retryCfg)
+				// TODO: Add parsed info as prom metric somehow (elastic status maybe)
 				recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
 			}
 		}
 	}
 }
 
+// TODO: Refactor parseResponse return parsing.Result so we have a cleaner logic flow with no side-effects in this function
 func parseResponse(logger *slog.Logger, parser parsing.HealthParser, resp *http.Response, retryCfg *retryBackoff) {
 	body, _ := io.ReadAll(resp.Body)
 	err := resp.Body.Close()

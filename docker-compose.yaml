@@ -50,6 +50,8 @@ services:
       timeout: 5s
       retries: 3
 
+  # Using elasticsearch here and opensearch in helm chart because I found that helm chart
+  # later. We should probably align to opensearch here as well.
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.3.0
     container_name: healthcheck-elasticsearch
