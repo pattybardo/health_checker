@@ -165,7 +165,7 @@ func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg C
 			// should be here, but one idea is to define the backoff outside the channel, and reset it inside once
 			// there is a healthy check. Otherwise consecutive retries will not go through an exponential backoff loop
 			retryCfg := retryBackoff{
-				counter: 0,
+				counter: 1,
 				// TODO: Could make configurable
 				threshold: 4,
 				retry:     true,

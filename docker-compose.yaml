@@ -6,7 +6,7 @@ services:
     container_name: health-checker
     environment:
       - PORT=8990
-      - CHECK_INTERVAL=5s
+      - CHECK_INTERVAL=15s
       - INSTANCE=docker-compose
       - RESPONSE_TIME_THRESHOLD=7ms
       - HEALTH_ENDPOINT_URL=http://elasticsearch:9200/_cluster/health
