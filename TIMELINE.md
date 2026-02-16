@@ -40,3 +40,11 @@ Now that the implementation is mostly figured out and the behavior is not bound 
 ## Kind Cluster
 
 Set up a kind cluster for the k8s deployment, but also to make it easier for someone else to recreate the same environment based on some configs I set.
+
+## Improvements
+
+These are things I probably won't get around to doing but would like to implement :D
+
+- **Hydrated manifests + ArgoCD** : Boot cluster with ArgoCD. Include scripts for automatically hydrating helm manifests into explicit outputs.
+- **Terraform booting kind cluster** : Skip having to handover from devenv to tf and make running solution more streamlined.
+- **Overall Productification** : I have hardcoded a lot of values to keep this simple. For a more serious setup, there would be much more templating and less magic strings everywhere.

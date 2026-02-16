@@ -37,14 +37,16 @@ spec:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 1
+            initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 2
+            initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 3 
           resources:
             requests:
               memory: "128Mi"

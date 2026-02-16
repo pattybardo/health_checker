@@ -41,3 +41,9 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+# OpenTofu / Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*

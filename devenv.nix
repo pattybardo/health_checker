@@ -11,6 +11,7 @@
     pkgs.kind
     pkgs.kubectl
     pkgs.k9s
+    pkgs.opentofu
   ];
 
   # https://devenv.sh/scripts/
