@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -184,22 +184,12 @@
         "filters": [
           {
             "condition": "",
-            "key": "endpoint",
-            "keyLabel": "endpoint",
+            "key": "job",
+            "keyLabel": "job",
             "operator": "=",
-            "value": "http://localhost:9200/_cluster/health",
+            "value": "healthchecker-compose",
             "valueLabels": [
-              "http://localhost:9200/_cluster/health"
-            ]
-          },
-          {
-            "condition": "",
-            "key": "instance",
-            "keyLabel": "instance",
-            "operator": "=",
-            "value": "host.docker.internal:8989",
-            "valueLabels": [
-              "host.docker.internal:8989"
+              "healthchecker-compose"
             ]
           }
         ],
@@ -214,7 +204,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "New dashboard",
+  "title": "Health Checker",
   "uid": "b91bae41-656b-409a-8d99-45609523d5cd",
-  "version": 1
+  "version": 2
 }
