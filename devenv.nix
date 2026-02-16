@@ -26,7 +26,7 @@
     kind export kubeconfig --name health-checker
   '';
 
-  scripts.cluster-load.exec = ''
+  scripts.load-docker-image.exec = ''
     docker build -t health-checker:local .
     kind load docker-image health-checker:local --name health-checker
   '';
@@ -34,6 +34,19 @@
 
   scripts.helm-deploy.exec = ''
     helm upgrade --install health-checker helm/ --namespace health-checker --create-namespace
+  '';
+
+  scripts.elastic-test-yellow.exec = ''
+    curl -X PUT "localhost:9200/test-yellow" -H 'Content-Type: application/json' -d '{
+      "settings": {
+        "number_of_shards": 1,
+        "number_of_replicas": 1
+      }
+    }'
+  '';
+
+  scripts.elastic-cleanup.exec = ''
+    curl -X DELETE "localhost:9200/test-yellow"
   '';
 
   # https://devenv.sh/basics/

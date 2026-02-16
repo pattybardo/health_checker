@@ -1,13 +1,16 @@
 services:
   healthchecker:
+    depends_on:
+      - elasticsearch
     build: .
     container_name: health-checker
     environment:
       - PORT=8990
       - CHECK_INTERVAL=5s
       - INSTANCE=docker-compose
-      - RESPONSE_TIME_THRESHOLD=3ms
+      - RESPONSE_TIME_THRESHOLD=7ms
       - HEALTH_ENDPOINT_URL=http://elasticsearch:9200/_cluster/health
+      - PARSER=elasticsearch
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8990/health"]
       interval: 30s

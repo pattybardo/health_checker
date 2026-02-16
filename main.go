@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"time"
@@ -30,6 +31,12 @@ type Config struct {
 type metrics struct {
 	responseTime  *prometheus.HistogramVec
 	responseTotal *prometheus.CounterVec
+}
+
+type retryBackoff struct {
+	counter   int
+	threshold int
+	retry     bool
 }
 
 func newMetrics(reg prometheus.Registerer) *metrics {
@@ -118,7 +125,6 @@ func main() {
 	logger = slog.Default().With(
 		"instance", instance,
 		"endpoint", cfg.HealthEndpointUrl,
-		"responseThreshold", cfg.ResponseTimeThreshold.String(),
 	)
 
 	reg := prometheus.NewRegistry()
@@ -146,44 +152,56 @@ func main() {
 }
 
 func healthCheck(logger *slog.Logger, done chan bool, ticker *time.Ticker, cfg Config, m *metrics) {
-	// TODO: Hardcoded for now, maybe add default parser later.
-	// TODO: With many endpoints this parser information needs to be chosen by I guess some sort of disocvery map.
-	// i.e have the config loop naively check the endpoint and see if it maps to a parser we have setup
+	// TODO: With many endpoints we need to create some config mapping endpoint and parser together
 	p := parsing.EnumToParser[cfg.Parser]
+
 	for {
 		select {
 		case <-done:
 			os.Exit(1)
 		case <-ticker.C:
-			start := time.Now()
-			resp, err := http.Get(cfg.HealthEndpointUrl)
-			elapsed := time.Since(start)
-			if err != nil {
-				logger.Error("HTTP error", "error", err.Error())
-				mockAlert(logger, "Error getting endpoint", "error", err.Error())
-				continue
+			// TODO: The ticker sends a tick on the channel after every configured time. With the exponential
+			// backoff, this could block the message, and then immediately be picked up. Not sure what the behavior
+			// should be here, but one idea is to define the backoff outside the channel, and reset it inside once
+			// there is a healthy check. Otherwise consecutive retries will not go through an exponential backoff loop
+			retryCfg := retryBackoff{
+				counter: 0,
+				// TODO: Could make configurable
+				threshold: 4,
+				retry:     true,
 			}
-			healthChecklogger := logger.With(
-				"service", p.ServiceName(),
-				"status", resp.StatusCode,
-				"responseTime", elapsed.String(),
-			)
+			for retryCfg.retry {
+				start := time.Now()
+				resp, err := http.Get(cfg.HealthEndpointUrl)
+				elapsed := time.Since(start)
+				if err != nil {
+					logger.Error("HTTP error", "error", err.Error())
+					mockAlert(logger, "Error getting endpoint", "error", err.Error())
+					retryCfg.retry = false
+					continue
+				}
+				healthChecklogger := logger.With(
+					"service", p.ServiceName(),
+					"status", resp.StatusCode,
+					"responseTime", elapsed.String(),
+				)
 
-			if cfg.ResponseTimeThreshold < elapsed {
-				healthChecklogger.Warn("Response time exceeded threshold")
+				if cfg.ResponseTimeThreshold < elapsed {
+					healthChecklogger.Warn("Response time exceeded threshold", "responseThreshold", cfg.ResponseTimeThreshold.String())
+				}
+
+				if resp.StatusCode != http.StatusOK {
+					mockAlert(healthChecklogger, "Unhealthy endpoint")
+				}
+
+				parseResponse(healthChecklogger, p, resp, &retryCfg)
+				recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
 			}
-
-			if resp.StatusCode != http.StatusOK {
-				mockAlert(healthChecklogger, "Unhealthy endpoint")
-			}
-
-			parseResponse(healthChecklogger, p, resp)
-			recordMetrics(m, resp.Status, elapsed, cfg.HealthEndpointUrl)
 		}
 	}
 }
 
-func parseResponse(logger *slog.Logger, parser parsing.HealthParser, resp *http.Response) {
+func parseResponse(logger *slog.Logger, parser parsing.HealthParser, resp *http.Response, retryCfg *retryBackoff) {
 	body, _ := io.ReadAll(resp.Body)
 	err := resp.Body.Close()
 	if err != nil {
@@ -194,13 +212,25 @@ func parseResponse(logger *slog.Logger, parser parsing.HealthParser, resp *http.
 		logger.Error("Parsing failure", "error", err)
 		os.Exit(1)
 	}
+
 	switch result.Status {
 	case parsing.StatusDegraded:
-		logger.Warn("TODO: Retry transient")
+		if retryCfg.counter >= retryCfg.threshold {
+			retryCfg.retry = false
+			logger.Error("Retry of expected transient failure did not succeed.")
+			mockAlert(logger, "Service experiencing degradation over a long period of time.")
+			return
+		}
+		sleepDuration := time.Duration(math.Pow(2, float64(retryCfg.counter)))
+		logger.Warn("Retrying expected transient error with exponential backoff", "sleepSeconds", sleepDuration)
+		time.Sleep(sleepDuration * time.Second)
+		retryCfg.counter++
 	case parsing.StatusUnhealthy:
-		logger.Error("TODO: Error log")
 		mockAlert(logger, "Unhealthy service")
+		retryCfg.retry = false
 	default:
 		logger.Info("Finished tick")
+		retryCfg.retry = false
 	}
+
 }
