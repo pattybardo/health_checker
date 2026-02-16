@@ -5,7 +5,7 @@ Create an automated health check system for a web application that verifies the 
 
 ## Prerequisites
 
-All of the tools below were tested in this project on latest versions. I don't think there should be any issues with using older versions but I have not tested it :D
+All of the tools below were tested in this project on latest versions. I don't think there should be any issues with using older versions but I have not tested it :)
 
 - golang 
 - helm
@@ -18,7 +18,7 @@ If you would like to try out Nix and devenv, I have included some instructions f
 
 ### Nix
 
-I get another chance to proliferate Nix, which I think is awesome as a package manager and bundling this with devenv adds a really slim and easy to use abstraction on top of it that I think brings a lot of value :D 
+I get another chance to proliferate Nix, which I think is awesome as a package manager and bundling this with devenv adds a really slim and easy to use abstraction on top of it that I think brings a lot of value. 
 
 #### Option A: Determinate Systems Installer
 
@@ -45,7 +45,7 @@ Visit https://nixos.org/download and follow the installation instructions for yo
 
 ``` bash
 nix profile add nixpkgs#direnv --extra-experimental-features nix-command --extra-experimental-features flakes
-nix profile add  nixpkgs#devenv --extra-experimental-features nix-command --extra-experimental-features flakes --accept-flake-config
+nix profile add nixpkgs#devenv --extra-experimental-features nix-command --extra-experimental-features flakes --accept-flake-config
 ```
 
 To allow direnv to automatically load the environment when changing into the directory, you need to update your shell configuration: [instructions](https://direnv.net/docs/hook.html)
