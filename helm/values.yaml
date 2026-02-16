@@ -1,0 +1,30 @@
+image:
+  repository: health-checker
+  tag: local
+
+healthChecker:
+  port: 8990
+  checkInterval: 5s
+  instance: kind-cluster
+  responseTimeThreshold: 3ms
+  healthEndpointUrl: http://opensearch-cluster-master.health-checker.svc.cluster.local:9200/_cluster/health
+
+opensearch:
+  singleNode: true
+  resources:
+    requests:
+      # Minimum: https://github.com/opensearch-project/helm-charts/tree/main/charts/opensearch#requirements
+      memory: "4Gi" 
+      cpu: "400m"
+  opensearch.yml: |
+    cluster.name: opensearch-cluster
+    network.host: 0.0.0.0
+    discovery.type: single-node
+    plugins.security.disabled: true
+  persistence:
+    enabled: false
+  extraEnvs:
+    - name: DISABLE_SECURITY_PLUGIN
+      value: "true"
+    - name: DISABLE_INSTALL_DEMO_CONFIG
+      value: "true"

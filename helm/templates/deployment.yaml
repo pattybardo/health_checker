@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: health-checker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: {{ .Values.healthChecker.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.healthChecker.port }}"
+            - name: CHECK_INTERVAL
+              value: "{{ .Values.healthChecker.checkInterval }}"
+            - name: INSTANCE
+              value: "{{ .Values.healthChecker.instance }}"
+            - name: RESPONSE_TIME_THRESHOLD
+              value: "{{ .Values.healthChecker.responseTimeThreshold }}"
+            - name: HEALTH_ENDPOINT_URL
+              value: "{{ .Values.healthChecker.healthEndpointUrl }}"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"

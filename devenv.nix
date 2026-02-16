@@ -8,11 +8,31 @@
   packages = [ 
     pkgs.go
     pkgs.kubernetes-helm
+    pkgs.kind
+    pkgs.kubectl
+    pkgs.k9s
   ];
 
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
     echo hello from $GREET
+  '';
+
+  scripts.cluster-up.exec = ''
+    if ! kind get clusters | grep -q health-checker; then
+      kind create cluster --name health-checker --config k8s/kind-cluster.yaml
+    fi
+    kind export kubeconfig --name health-checker
+  '';
+
+  scripts.cluster-load.exec = ''
+    docker build -t health-checker:local .
+    kind load docker-image health-checker:local --name health-checker
+  '';
+
+
+  scripts.helm-deploy.exec = ''
+    helm upgrade --install health-checker helm/ --namespace health-checker --create-namespace
   '';
 
   # https://devenv.sh/basics/

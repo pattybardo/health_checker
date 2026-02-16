@@ -39,6 +39,8 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
     volumes:
       - ./configs/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./configs/grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+      - ./configs/dashboards:/var/lib/grafana/dashboards:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s

@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: "Health Checker"
+    orgId: 1
+    type: file
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

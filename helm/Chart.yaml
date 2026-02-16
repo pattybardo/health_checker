@@ -1,0 +1,9 @@
+apiVersion: v2
+name: health-checker
+description: A Helm chart for deploying the health checker application
+version: 0.1.0
+
+dependencies:
+  - name: opensearch
+    version: "2.34.0"
+    repository: "https://opensearch-project.github.io/helm-charts"

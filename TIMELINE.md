@@ -35,4 +35,8 @@ There are still a few things to improve on the checker side, but I want to compl
 
 ## Tests
 
-Now that the implementation is mostly figured out and the behavior is not bound to change too much, it is valuable to include tests.
+Now that the implementation is mostly figured out and the behavior is not bound to change too much, I think it's a good time to write tests.
+
+## Kind Cluster
+
+Set up a kind cluster for the k8s deployment, but also to make it easier for someone else to recreate the same environment based on some configs I set.
