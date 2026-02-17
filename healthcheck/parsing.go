@@ -1,8 +1,14 @@
-package parsing
+package healthcheck
 
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log/slog"
+	"math"
+	"net/http"
+	"os"
+	"time"
 )
 
 type ParserEnum int
@@ -85,4 +91,39 @@ func (ep *ElasticClusterParser) Parse(body []byte) (Result, error) {
 
 func (ep *ElasticClusterParser) ServiceName() string {
 	return "elasticsearch"
+}
+
+// TODO: Refactor parseResponse return Result so we have a cleaner logic flow with no side-effects in this function
+func parseResponse(logger *slog.Logger, parser HealthParser, resp *http.Response, retryCfg *retryBackoff) {
+	body, _ := io.ReadAll(resp.Body)
+	err := resp.Body.Close()
+	if err != nil {
+		logger.Warn("Error closing the response body", "error", err)
+	}
+	result, err := parser.Parse(body)
+	if err != nil {
+		logger.Error("Parsing failure", "error", err)
+		os.Exit(1)
+	}
+
+	switch result.Status {
+	case StatusDegraded:
+		if retryCfg.counter >= retryCfg.threshold {
+			retryCfg.retry = false
+			logger.Error("Retry of expected transient failure did not succeed.")
+			mockAlert(logger, "Service experiencing degradation over a long period of time.")
+			return
+		}
+		sleepDuration := time.Duration(math.Pow(2, float64(retryCfg.counter)))
+		logger.Warn("Retrying expected transient error with exponential backoff", "sleepSeconds", sleepDuration)
+		time.Sleep(sleepDuration * time.Second)
+		retryCfg.counter++
+	case StatusUnhealthy:
+		mockAlert(logger, "Unhealthy service")
+		retryCfg.retry = false
+	default:
+		logger.Info("Finished tick")
+		retryCfg.retry = false
+	}
+
 }
